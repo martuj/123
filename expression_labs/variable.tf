@@ -1,0 +1,3 @@
+variable "instancecheck" {
+    default = true
+}
