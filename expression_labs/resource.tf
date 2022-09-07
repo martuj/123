@@ -17,8 +17,10 @@ resource "google_compute_instance" "dev_instance" {
 
     }
 }
+
 resource "google_compute_instance" "prod_instance" {
-    name = "instance-prod-"
+    name = "instance-prod-${count.index}"
+
     machine_type = "f1-micro"
     count = var.instancecheck == true ? 2 : 0
 
@@ -31,6 +33,7 @@ resource "google_compute_instance" "prod_instance" {
     network_interface {
         network = "default"
     }
+    
 
     access_config {
 

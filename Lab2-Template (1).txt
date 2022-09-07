@@ -1,0 +1,119 @@
+~~~~~~~~~~~~~~~~~~~install_flask.tpl~~~~~~~~~~~~~~~~~~~~~~~~~``
+#!/bin/bash
+sudo apt-get update -y
+sudo apt-get install -yq build-essential python-pip rsync
+sudo apt-get install wget -y
+pip install flask
+sudo touch /tmp/app.py
+sudo mkdir /tmp/templates
+sudo chmod 777 /tmp/templates
+sudo touch /tmp/templates/index.html
+sudo cat << "EOF" > /tmp/templates/index.html
+<!DOCTYPE html>
+<html>
+<style>
+body {
+  font-size: 100px;
+}
+p {text-align: center;}
+</style>
+<body>
+<span style='font-size:500px;text-align:center'>🌩</span>
+<p>Welcome to the Cloud 😃</p>
+</body>
+</html>
+EOF
+sudo chmod 777 /tmp/templates/index.html
+sudo cat << "EOF" > /tmp/app.py
+from flask import Flask, render_template
+app = Flask(__name__)
+@app.route('/')
+def index():
+   return render_template('index.html')
+app.run(host='0.0.0.0')
+EOF
+sudo chmod 777 /tmp/app.py
+sudo python /tmp/app.py
+~~~~~~~~~~~~~~~~`vars.tf~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+variable "project" {
+  default = "neat-responder-358502"
+}
+variable "region" {
+  default = "us-central1"
+}
+variable "image_family" {
+  default = "debian-10"
+}
+variable "image_project" {
+  default = "debian-cloud"
+}
+variable "vpc_name" {
+  default = "terraform-flask-vpcapp-network"
+}
+variable "zone" {
+  default = "us-central1-c"
+}
+variable "machine_type" {
+  default = "f1-micro"
+}
+variable "firewall_name" {
+  default = "fwapp"
+}
+~~~~~~~~~~~~~~~provider.tf~~~~~~~~~~~~~~~~~~~~~~~~~
+provider "google" {
+  credentials = file("terraform-gcp.json")
+  project     = var.project
+  region      = var.region
+}
+~~~~~~~~~~~~~~~~~~~~~~network.tf~~~~~~~~~~~~~~~~~~~~~~~~~`~~~~~~~~~~~
+resource "google_compute_network" "vpc_network" {
+  project                 = var.project
+  name                    = var.vpc_name
+  auto_create_subnetworks = true
+}
+resource "google_compute_firewall" "fw" {
+  name    = var.firewall_name
+  network = google_compute_network.vpc_network.name
+  allow {
+    protocol = "tcp"
+    ports    = ["5000"]
+  }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~main.tf~~~~~~~~~~~~~~~~~~~
+data "google_compute_image" "flask_image" {
+  family  = var.image_family
+  project = var.image_project
+}
+data "template_file" "webapp" {
+   template = file("${path.module}/template/install_flask.tpl")
+ }
+// Terraform plugin for creating random ids
+resource "random_id" "instance_id" {
+  byte_length = 8
+}
+// A single Compute Engine instance
+resource "google_compute_instance" "vm_instance" {
+  name         = "flask-vm-${random_id.instance_id.hex}"
+  machine_type = var.machine_type
+  zone         = var.zone
+  boot_disk {
+    initialize_params {
+      image = data.google_compute_image.flask_image.self_link
+    }
+  }
+metadata_startup_script = data.template_file.webapp.rendered
+  network_interface {
+    network = google_compute_network.vpc_network.name
+    access_config {
+      // Include this section to give the VM an external ip address
+    }
+  }
+}
+ ~~~~~~~~~~~~~~~~~~~~~~output.tf~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+output "ip" {
+  value = google_compute_instance.vm_instance.network_interface.0.access_config.0.nat_ip
+}
+output "script"{
+  value = google_compute_instance.vm_instance.metadata_startup_script
+  sensitive = true
+}

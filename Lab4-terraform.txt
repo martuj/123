@@ -1,0 +1,112 @@
+instance.tf
+
+provider "google" {
+  credentials = var.creds
+  project     = "stately-magpie-355709"
+  zone 	 = "us-west2-a"
+  region      = "us-west2"
+}
+
+resource "google_compute_instance" "vm_instance" {
+  name         = "terraform-instance-test"
+  machine_type = "g1-small"
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10-buster-v20220719"
+    }
+  }
+
+  network_interface {
+    # A default network is created for all GCP projects
+    network = "default"
+    access_config {
+    }
+  }
+}
+
+# terraform login
+
+mkdir tcworkspaces
+cd tcworkspaces
+
+vi creds
+
+Vi main.tf 
+
+provider "google" {
+credentials = file("creds")
+project     = "stately-magpie-355709"
+zone 	 = "us-west2-a"
+region      = "us-west2"
+}
+resource "google_compute_instance" "vm_instance" {
+  name         =  "${lookup(var.instance_name, var.env)} "
+  machine_type = "g1-small"
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10-buster-v20220719"
+    }
+  }
+network_interface {
+    network = "default"
+    access_config {
+    }
+  }
+}
+
+
+Vi variable.tf
+
+variable "instance_name" {
+  type        = map
+  description = "environment-name"
+  default     = {
+    dev  = "tc-dev-env-instance"
+    prod = "tc-prod-env-instance"
+  }
+}
+
+variable "env" {
+  description = "env: dev or prod"
+}
+
+Create file called versions.tf and paste the following
+
+vi versions.tf
+
+
+terraform {
+  cloud {
+    organization = "TerraformCloudProject"
+    workspaces {
+     tags = ["tc-app"]
+   }
+  }
+}
+
+
+terraform init
+
+terraform plan -var 'env=dev'
+
+terraform apply -var 'env=dev'
+
+terraform workspace new tc-app-prod
+
+terraform init
+
+terraform plan -var 'env=prod'
+
+terraform apply -var 'env=prod'
+
+
+terraform workspace select tc-app-dev
+terraform destroy -var 'env=dev'
+
+
+terraform workspace select tc-app-prod
+
+terraform destroy -var 'env=prod'
+
+

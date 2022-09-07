@@ -1,0 +1,147 @@
+mkdir conditionals
+cd conditionals
+
+
+vi key.json
+
+vi instance.tf
+
+provider "google" {
+  credentials = file("key.json")
+  project     = "stately-magpie-355709"
+  zone        = "us-west2-a"
+  region      = "us-west2"
+}
+resource "google_compute_instance" "vm_instance" {
+  name         = "terraform-instance-test"
+  machine_type = "g1-small"
+  boot_disk {
+    initialize_params {
+      image = (var.image == "debian" ? "debian-cloud/debian-10-buster-v20220719" : "projects/centos-cloud/global/images/centos-7-v20220822")
+    }
+  }
+  network_interface {
+    network = "default"
+    access_config {
+    }
+  }
+}
+
+
+Create vars.tf file and paste the following
+
+vi vars.tf
+
+variable "image" {
+  type        = string
+  description = "Enter debian for debian image and any other value for centos image"
+}
+
+
+terraform init
+
+
+terraform fmt
+
+terraform validate
+
+terraform plan
+
+terraform apply
+
+
+terraform destroy
+
+Task 2: for-each loop with terraform
+
+vi instance .tf
+
+
+provider "google" {
+  credentials = file("key.json")
+  project     = "stately-magpie-355709"
+  zone        = "us-east4-c"
+  region      = "us-east4"
+}
+resource "google_compute_instance" "vm_instance" {
+  for_each     = var.names
+  name         = each.value
+  machine_type = "g1-small"
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10-buster-v20220719"
+    }
+  }
+  network_interface {
+    network = "default"
+    access_config {
+    }
+  }
+}
+
+
+vi vars.tf
+
+
+variable "names" {
+               type    = set(string)
+               default = ["terraform-vm-1", "terraform-vm-2"]
+         }
+
+
+
+terraform init
+terraform fmt
+terraform validate
+terraform plan
+
+
+terraform apply
+
+Task 3: for loop with terraform
+
+vi instance.tf
+
+
+ 
+
+provider "google" {
+  credentials = file("key.json")
+  project     = "stately-magpie-355709"
+  zone        = "us-east4-c"
+  region      = "us-east4"
+}
+resource "google_compute_instance" "vm_instance" {
+  name         = "terraform-vm1"
+  machine_type = "g1-small"
+  tags = [ for tagname in var.tags : tagname]
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10-buster-v20220719"
+    }
+  }
+  network_interface {
+    network = "default"
+    access_config {
+    }
+  }
+}
+
+
+vi vars.tf
+
+
+
+variable "tags" {
+  type    = set(string)
+  default = ["nt-tag-1", "nt-tag-2"]
+}
+
+
+terraform init
+terraform fmt
+terraform validate
+terraform plan
+
+
+terraform apply
