@@ -30,7 +30,7 @@ resource "google_compute_instance" "default" {
       # nat_ip = "${google_compute_address.static.address}"
     }
   }
-
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~output.tf~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 output "ip" {
